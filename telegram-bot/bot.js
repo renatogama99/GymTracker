@@ -19,7 +19,9 @@ if (!CHAT_ID || CHAT_ID === "your_chat_id_here") {
   process.exit(1);
 }
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error("❌ SUPABASE_URL / SUPABASE_KEY não definidos no ficheiro .env");
+  console.error(
+    "❌ SUPABASE_URL / SUPABASE_KEY não definidos no ficheiro .env",
+  );
   process.exit(1);
 }
 
@@ -90,7 +92,9 @@ bot.command("status", async (ctx) => {
   const ativos = (alerts ?? []).filter((a) => a.enabled);
   const lista =
     ativos.length > 0
-      ? ativos.map((a) => `• <code>${a.send_time}</code> — ${a.message}`).join("\n")
+      ? ativos
+          .map((a) => `• <code>${a.send_time}</code> — ${a.message}`)
+          .join("\n")
       : "Nenhum alerta ativo.";
 
   ctx.reply(
@@ -176,13 +180,14 @@ cron.schedule(
 
 // ── Arranque ──────────────────────────────────────────────────────────────
 bot.launch();
-console.log(`✅ Bot iniciado (${TIMEZONE}) — a verificar alertas a cada minuto`);
+console.log(
+  `✅ Bot iniciado (${TIMEZONE}) — a verificar alertas a cada minuto`,
+);
 console.log(`💡 Envia /start ao bot para obter o teu Chat ID`);
 console.log(`💡 Envia /status para ver os alertas configurados`);
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
-
 
 // ── Validação de configuração ──────────────────────────────────────────────
 const BOT_TOKEN = process.env.BOT_TOKEN;
