@@ -40,15 +40,15 @@ export function CalendarioTab() {
     return [...new Set(getLogsForDay(day).map((l) => l.workoutType))];
   }
 
-  function getCompletionForDay(day: Date): DayCompletion | undefined {
+  function getCompletionsForDay(day: Date): DayCompletion[] {
     const dayStr = format(day, "yyyy-MM-dd");
-    return state.completions.find((c) => c.date === dayStr);
+    return state.completions.filter((c) => c.date === dayStr);
   }
 
   const selectedDayLogs = selectedDay ? getLogsForDay(selectedDay) : [];
-  const selectedDayCompletion = selectedDay
-    ? getCompletionForDay(selectedDay)
-    : undefined;
+  const selectedDayCompletions = selectedDay
+    ? getCompletionsForDay(selectedDay)
+    : [];
 
   return (
     <div className="space-y-4">
@@ -89,7 +89,9 @@ export function CalendarioTab() {
         <div className="grid grid-cols-7">
           {days.map((day) => {
             const types = getTypesForDay(day);
-            const completion = getCompletionForDay(day);
+            const dayCompletions = getCompletionsForDay(day);
+            const doneCount = dayCompletions.filter((c) => c.completed).length;
+            const failCount = dayCompletions.length - doneCount;
             const inMonth = isSameMonth(day, currentMonth);
             const today = isToday(day);
             const selected = selectedDay && isSameDay(day, selectedDay);
@@ -120,10 +122,11 @@ export function CalendarioTab() {
                       className={`w-1.5 h-1.5 rounded-full ${COLOR_CLASSES[t].dot}`}
                     />
                   ))}
-                  {completion !== undefined && (
-                    <span className="text-[9px] leading-none">
-                      {completion.completed ? "✅" : "❌"}
-                    </span>
+                  {doneCount > 0 && (
+                    <span className="text-[9px] leading-none">✅{doneCount}</span>
+                  )}
+                  {failCount > 0 && (
+                    <span className="text-[9px] leading-none">❌{failCount}</span>
                   )}
                 </div>
               </button>
@@ -161,18 +164,23 @@ export function CalendarioTab() {
             </button>
           </div>
 
-          {/* Telegram completion status */}
-          {selectedDayCompletion !== undefined && (
-            <div
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b border-gray-50
-                ${selectedDayCompletion.completed ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}
-            >
-              <span>{selectedDayCompletion.completed ? "✅" : "❌"}</span>
-              <span>
-                {selectedDayCompletion.completed
-                  ? `${selectedDayCompletion.reminderName ?? "Lembrete"} cumprido via Telegram`
-                  : `${selectedDayCompletion.reminderName ?? "Lembrete"} não cumprido (assinalado via Telegram)`}
-              </span>
+          {/* Telegram completion status (cumulative per reminder) */}
+          {selectedDayCompletions.length > 0 && (
+            <div className="divide-y divide-gray-50 border-b border-gray-50">
+              {selectedDayCompletions.map((entry) => (
+                <div
+                  key={entry.id}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium
+                    ${entry.completed ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}
+                >
+                  <span>{entry.completed ? "✅" : "❌"}</span>
+                  <span>
+                    {entry.completed
+                      ? `${entry.reminderName ?? "Lembrete"} cumprido via Telegram`
+                      : `${entry.reminderName ?? "Lembrete"} não cumprido (assinalado via Telegram)`}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 

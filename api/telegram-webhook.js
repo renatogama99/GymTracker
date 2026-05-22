@@ -84,8 +84,8 @@ export default async function handler(req, res) {
         const date = todayStr(TIMEZONE);
         await telegramApi("sendMessage", {
           chat_id: chatId,
-          text: "🏋️ Registaste o treino de hoje?",
-          reply_markup: completionKeyboard(date),
+          text: "📝 Queres assinalar este lembrete?",
+          reply_markup: completionKeyboard(date, "manual"),
         });
       }
     }
@@ -97,17 +97,20 @@ export default async function handler(req, res) {
 
       if (action && date) {
         const completed = action === "done";
+        const completionAlertId = alertId || "manual";
 
         let reminderName = "Lembrete";
-        if (alertId) {
+        if (completionAlertId !== "manual") {
           const { data: alertRow } = await supabase
             .from("alerts")
             .select("message")
-            .eq("id", alertId)
+            .eq("id", completionAlertId)
             .single();
           if (alertRow?.message) {
             reminderName = alertRow.message;
           }
+        } else {
+          reminderName = "Lembrete manual";
         }
 
         const label = completed
@@ -118,10 +121,10 @@ export default async function handler(req, res) {
           {
             date,
             completed,
-            alert_id: alertId ?? null,
+            alert_id: completionAlertId,
             reminder_name: reminderName,
           },
-          { onConflict: "date" },
+          { onConflict: "date,alert_id" },
         );
 
         await telegramApi("answerCallbackQuery", {

@@ -55,6 +55,25 @@ CREATE TABLE IF NOT EXISTS day_completions (
 ALTER TABLE day_completions ADD COLUMN IF NOT EXISTS alert_id TEXT;
 ALTER TABLE day_completions ADD COLUMN IF NOT EXISTS reminder_name TEXT;
 
+-- Allow cumulative reminders in the same day: one status per (date, alert_id)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'day_completions_date_key'
+  ) THEN
+    ALTER TABLE day_completions DROP CONSTRAINT day_completions_date_key;
+  END IF;
+END $$;
+
+UPDATE day_completions
+SET alert_id = 'manual'
+WHERE alert_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS day_completions_date_alert_idx
+  ON day_completions (date, alert_id);
+
 -- ── Disable RLS (single-user personal app) ────────────────────────────────
 ALTER TABLE workout_logs      DISABLE ROW LEVEL SECURITY;
 ALTER TABLE lift_entries      DISABLE ROW LEVEL SECURITY;
