@@ -2,10 +2,44 @@ export type WorkoutType = "amrap" | "emom" | "tabata" | "chipper" | "wod";
 
 export type Tab =
   | "treinos"
+  | "aulas"
   | "calendario"
   | "recordes"
   | "alertas"
-  | "nutricao";
+  | "nutricao"
+  | "admin";
+
+export type Role = "admin" | "coach" | "athlete";
+
+export interface Box {
+  id: string;
+  name: string;
+}
+
+export interface Profile {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  boxId: string;
+}
+
+export interface ClassSession {
+  id: string;
+  boxId: string;
+  title: string;
+  startsAt: string; // ISO datetime
+  coachId: string;
+  capacity: number;
+}
+
+export interface ClassBooking {
+  id: string;
+  classId: string;
+  athleteId: string;
+  bookedBy: string;
+  attended: boolean;
+}
 
 export interface WorkoutLog {
   id: string;

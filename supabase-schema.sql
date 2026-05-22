@@ -3,6 +3,45 @@
 -- Run this in the Supabase SQL Editor (Project → SQL Editor)
 -- ============================================================
 
+-- 0. Box, roles and class scheduling
+CREATE TABLE IF NOT EXISTS boxes (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT        NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS profiles (
+  id         UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email      TEXT        NOT NULL DEFAULT '',
+  full_name  TEXT        NOT NULL DEFAULT '',
+  role       TEXT        NOT NULL CHECK (role IN ('admin', 'coach', 'athlete')),
+  box_id     UUID        NOT NULL REFERENCES boxes(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS classes (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  box_id     UUID        NOT NULL REFERENCES boxes(id) ON DELETE CASCADE,
+  title      TEXT        NOT NULL,
+  starts_at  TIMESTAMPTZ NOT NULL,
+  coach_id   UUID        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  capacity   INTEGER     NOT NULL CHECK (capacity > 0),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS class_bookings (
+  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id    UUID        NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  athlete_id  UUID        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  booked_by   UUID        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  attended    BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (class_id, athlete_id)
+);
+
+CREATE INDEX IF NOT EXISTS classes_box_starts_idx
+  ON classes (box_id, starts_at);
+
 -- 1. Workout Logs (treinos registados manualmente)
 CREATE TABLE IF NOT EXISTS workout_logs (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,3 +119,7 @@ ALTER TABLE lift_entries      DISABLE ROW LEVEL SECURITY;
 ALTER TABLE benchmark_entries DISABLE ROW LEVEL SECURITY;
 ALTER TABLE alerts            DISABLE ROW LEVEL SECURITY;
 ALTER TABLE day_completions   DISABLE ROW LEVEL SECURITY;
+ALTER TABLE boxes             DISABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE classes           DISABLE ROW LEVEL SECURITY;
+ALTER TABLE class_bookings    DISABLE ROW LEVEL SECURITY;
