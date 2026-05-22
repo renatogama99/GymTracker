@@ -16,7 +16,7 @@ interface AuthContextValue {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, boxId?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -28,10 +28,12 @@ async function resolveProfile(user: User): Promise<Profile> {
     (user.user_metadata?.full_name as string | undefined) ??
     user.email?.split("@")[0] ??
     "Atleta";
+  const boxIdFromMeta = user.user_metadata?.box_id as string | undefined;
   return db.ensureProfileForUser({
     userId: user.id,
     email: user.email ?? "",
     fullName: fullNameFromMeta,
+    boxId: boxIdFromMeta,
   });
 }
 

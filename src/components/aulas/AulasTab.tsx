@@ -1,241 +1,305 @@
-import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { useState, useEffect } from "react";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  startOfWeek,
+  endOfWeek,
+  isSameMonth,
+  isSameDay,
+  isToday,
+  addMonths,
+  subMonths,
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, CheckCircle2, UserX } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, CheckCircle2, UserX } from "lucide-react";
 import type { ClassBooking, ClassSession, Profile } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import * as db from "../../lib/db";
 
+const WEEK_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
 export function AulasTab() {
   const { profile } = useAuth();
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [members, setMembers] = useState<Profile[]>([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [classes, setClasses] = useState<Map<string, ClassSession[]>>(new Map());
   const [bookings, setBookings] = useState<ClassBooking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedAthleteByClass, setSelectedAthleteByClass] = useState<
-    Record<string, string>
-  >({});
+  const [members, setMembers] = useState<Profile[]>([]);
 
-  async function refresh() {
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+  const days = eachDayOfInterval({ start: calStart, end: calEnd });
+
+  async function refreshData() {
     if (!profile) return;
-    setLoading(true);
     try {
-      const [membersData, classesData] = await Promise.all([
-        db.fetchMembersByBox(profile.boxId),
-        db.fetchClassesByDate(profile.boxId, date),
-      ]);
-      const bookingsData = await db.fetchBookingsForClasses(
-        classesData.map((c) => c.id),
-      );
+      const membersData = await db.fetchMembersByBox(profile.boxId);
       setMembers(membersData);
-      setClasses(classesData);
-      setBookings(bookingsData);
+
+      const classMap = new Map<string, ClassSession[]>();
+      const allBookings: ClassBooking[] = [];
+
+      for (const day of days) {
+        const dateStr = format(day, "yyyy-MM-dd");
+        const classesForDay = await db.fetchClassesByDate(profile.boxId, dateStr);
+        if (classesForDay.length > 0) {
+          classMap.set(dateStr, classesForDay);
+          const bookingsForDay = await db.fetchBookingsForClasses(
+            classesForDay.map((c) => c.id),
+          );
+          allBookings.push(...bookingsForDay);
+        }
+      }
+
+      setClasses(classMap);
+      setBookings(allBookings);
     } finally {
-      setLoading(false);
+      // cleanup
     }
   }
 
   useEffect(() => {
-    void refresh();
-  }, [profile?.boxId, date]);
-
-  const athletes = useMemo(
-    () => members.filter((m) => m.role === "athlete"),
-    [members],
-  );
-  const memberById = useMemo(
-    () => Object.fromEntries(members.map((m) => [m.id, m])),
-    [members],
-  );
+    void refreshData();
+  }, [profile?.boxId, currentMonth]);
 
   if (!profile) return null;
 
+  const getClassesForDay = (day: Date): ClassSession[] => {
+    const dayStr = format(day, "yyyy-MM-dd");
+    return classes.get(dayStr) ?? [];
+  };
+
+  const getBookingsForClasses = (classIds: string[]): ClassBooking[] => {
+    return bookings.filter((b) => classIds.includes(b.classId));
+  };
+
+  const memberById = new Map(members.map((m) => [m.id, m]));
+
+  const selectedDayClasses = selectedDay ? getClassesForDay(selectedDay) : [];
+  const selectedDayBookings = getBookingsForClasses(
+    selectedDayClasses.map((c) => c.id),
+  );
+
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
-        <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest block mb-1.5">
-          Dia
-        </label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-xl border border-gray-200 px-3 py-2 text-sm"
-        />
+      {/* Month navigation */}
+      <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
+        <button
+          onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 active:scale-95 transition-all"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <span className="font-semibold text-gray-800 capitalize">
+          {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+        </span>
+        <button
+          onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 active:scale-95 transition-all"
+        >
+          <ChevronRight size={20} />
+        </button>
       </div>
 
-      {loading ? (
-        <div className="text-sm text-gray-400">A carregar aulas...</div>
-      ) : classes.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-10 text-center text-sm text-gray-400">
-          Não há aulas para este dia.
-        </div>
-      ) : (
-        classes.map((session) => {
-          const classBookings = bookings.filter((b) => b.classId === session.id);
-          const coachName = memberById[session.coachId]?.fullName ?? "Coach";
-          const hasCapacity = classBookings.length < session.capacity;
-          const myBooking = classBookings.find((b) => b.athleteId === profile.id);
-
-          return (
+      {/* Calendar grid */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 border-b border-gray-50">
+          {WEEK_DAYS.map((d) => (
             <div
-              key={session.id}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+              key={d}
+              className="text-center text-xs font-semibold text-gray-400 py-2"
             >
-              <div className="px-4 py-3 border-b border-gray-50 bg-gray-50">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <h3 className="font-semibold text-gray-800">{session.title}</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {format(new Date(session.startsAt), "HH:mm", {
-                        locale: ptBR,
-                      })} · Coach {coachName}
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-900 text-white">
-                    {classBookings.length}/{session.capacity}
-                  </span>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 space-y-3">
-                {profile.role === "athlete" && (
-                  <button
-                    onClick={async () => {
-                      if (myBooking) {
-                        await db.unbookClass(session.id, profile.id);
-                      } else if (hasCapacity) {
-                        await db.bookClass({
-                          classId: session.id,
-                          athleteId: profile.id,
-                          bookedBy: profile.id,
-                        });
-                      }
-                      await refresh();
-                    }}
-                    disabled={!myBooking && !hasCapacity}
-                    className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-all
-                      ${myBooking
-                        ? "bg-red-50 text-red-600"
-                        : hasCapacity
-                          ? "bg-gray-900 text-white"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
-                  >
-                    {myBooking ? "Desmarcar aula" : "Marcar aula"}
-                  </button>
-                )}
-
-                {(profile.role === "coach" || profile.role === "admin") && (
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedAthleteByClass[session.id] ?? ""}
-                      onChange={(e) =>
-                        setSelectedAthleteByClass((prev) => ({
-                          ...prev,
-                          [session.id]: e.target.value,
-                        }))
-                      }
-                      className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                    >
-                      <option value="">Escolher atleta...</option>
-                      {athletes.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.fullName}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={async () => {
-                        const athleteId = selectedAthleteByClass[session.id];
-                        if (!athleteId) return;
-                        const exists = classBookings.some(
-                          (b) => b.athleteId === athleteId,
-                        );
-                        if (exists) {
-                          await db.unbookClass(session.id, athleteId);
-                        } else {
-                          await db.bookClass({
-                            classId: session.id,
-                            athleteId,
-                            bookedBy: profile.id,
-                          });
-                        }
-                        await refresh();
-                      }}
-                      className="rounded-xl bg-gray-900 text-white px-3 py-2 text-sm font-semibold"
-                    >
-                      Alternar
-                    </button>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
-                    Inscritos
-                  </div>
-                  {classBookings.length === 0 ? (
-                    <div className="text-sm text-gray-400">Sem atletas inscritos.</div>
-                  ) : (
-                    classBookings.map((booking) => {
-                      const athlete = memberById[booking.athleteId];
-                      return (
-                        <div
-                          key={booking.id}
-                          className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 px-3 py-2"
-                        >
-                          <span className="text-sm text-gray-700">
-                            {athlete?.fullName ?? "Atleta"}
-                          </span>
-
-                          <div className="flex items-center gap-1.5">
-                            {(profile.role === "coach" || profile.role === "admin") && (
-                              <button
-                                onClick={async () => {
-                                  await db.setAttendance(
-                                    booking.classId,
-                                    booking.athleteId,
-                                    !booking.attended,
-                                  );
-                                  await refresh();
-                                }}
-                                className={`px-2 py-1 rounded-lg text-xs font-semibold
-                                  ${booking.attended
-                                    ? "bg-green-50 text-green-600"
-                                    : "bg-amber-50 text-amber-600"}`}
-                              >
-                                <CheckCircle2 size={14} className="inline mr-1" />
-                                {booking.attended ? "Presente" : "Confirmar"}
-                              </button>
-                            )}
-                            {(profile.role === "coach" || profile.role === "admin") && (
-                              <button
-                                onClick={async () => {
-                                  await db.unbookClass(booking.classId, booking.athleteId);
-                                  await refresh();
-                                }}
-                                className="p-1.5 text-gray-300 hover:text-red-500"
-                              >
-                                <UserX size={14} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                <div className="text-[11px] text-gray-400 flex items-center gap-1.5">
-                  <CalendarClock size={13} />
-                  {format(new Date(session.startsAt), "d 'de' MMMM 'às' HH:mm", {
-                    locale: ptBR,
-                  })}
-                </div>
-              </div>
+              {d}
             </div>
-          );
-        })
+          ))}
+        </div>
+
+        {/* Day cells */}
+        <div className="grid grid-cols-7">
+          {days.map((day) => {
+            const dayClasses = getClassesForDay(day);
+            const inMonth = isSameMonth(day, currentMonth);
+            const today = isToday(day);
+            const selected = selectedDay && isSameDay(day, selectedDay);
+
+            return (
+              <button
+                key={day.toISOString()}
+                onClick={() =>
+                  setSelectedDay((prev) =>
+                    prev && isSameDay(prev, day) ? null : day,
+                  )
+                }
+                className={`relative flex flex-col items-center pt-2 pb-1.5 border-b border-r border-gray-50 min-h-[52px] transition-all
+                  ${!inMonth ? "opacity-30" : ""}
+                  ${selected ? "bg-gray-50" : "hover:bg-gray-50"}
+                `}
+              >
+                <span
+                  className={`text-sm w-7 h-7 flex items-center justify-center rounded-full font-medium transition-all
+                  ${today ? "bg-gray-900 text-white font-bold" : "text-gray-700"}`}
+                >
+                  {format(day, "d")}
+                </span>
+                {dayClasses.length > 0 && (
+                  <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center items-center">
+                    <span className="text-[9px] leading-none">
+                      📚{dayClasses.length}
+                    </span>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Day detail view (bottom sheet style) */}
+      {selectedDay && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+            <h3 className="font-semibold text-gray-800 capitalize">
+              {format(selectedDay, "d 'de' MMMM", { locale: ptBR })}
+            </h3>
+            <button
+              onClick={() => setSelectedDay(null)}
+              className="p-1.5 text-gray-400 rounded-lg hover:text-gray-700"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {selectedDayClasses.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-gray-400">
+              Nenhuma aula neste dia.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {selectedDayClasses.map((session) => {
+                const classBookings = selectedDayBookings.filter(
+                  (b) => b.classId === session.id,
+                );
+                const coachName = memberById.get(session.coachId)?.fullName ?? "Coach";
+                const hasCapacity = classBookings.length < session.capacity;
+                const myBooking = classBookings.find(
+                  (b) => b.athleteId === profile.id,
+                );
+
+                return (
+                  <div key={session.id} className="p-4 space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-gray-800">
+                        {session.title}
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {format(new Date(session.startsAt), "HH:mm", {
+                          locale: ptBR,
+                        })}{" "}
+                        · Coach {coachName} ·{" "}
+                        <span className="font-semibold">
+                          {classBookings.length}/{session.capacity}
+                        </span>
+                      </p>
+                    </div>
+
+                    {/* Athlete booking button */}
+                    {profile.role === "athlete" && (
+                      <button
+                        onClick={async () => {
+                          if (myBooking) {
+                            await db.unbookClass(session.id, profile.id);
+                          } else if (hasCapacity) {
+                            await db.bookClass({
+                              classId: session.id,
+                              athleteId: profile.id,
+                              bookedBy: profile.id,
+                            });
+                          }
+                          await refreshData();
+                        }}
+                        disabled={!myBooking && !hasCapacity}
+                        className={`w-full rounded-xl py-2 text-sm font-semibold transition-all
+                          ${myBooking
+                            ? "bg-red-50 text-red-600"
+                            : hasCapacity
+                              ? "bg-gray-900 text-white"
+                              : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+                      >
+                        {myBooking ? "Desmarcar aula" : "Marcar aula"}
+                      </button>
+                    )}
+
+                    {/* Coach/Admin enrollment and attendance */}
+                    {(profile.role === "coach" || profile.role === "admin") && (
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                          Inscritos ({classBookings.length}/{session.capacity})
+                        </div>
+                        {classBookings.length === 0 ? (
+                          <div className="text-sm text-gray-400">
+                            Sem atletas inscritos.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {classBookings.map((booking) => {
+                              const athlete = memberById.get(booking.athleteId);
+                              return (
+                                <div
+                                  key={booking.id}
+                                  className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-2 py-1.5"
+                                >
+                                  <span className="text-xs text-gray-700">
+                                    {athlete?.fullName ?? "Atleta"}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={async () => {
+                                        await db.setAttendance(
+                                          booking.classId,
+                                          booking.athleteId,
+                                          !booking.attended,
+                                        );
+                                        await refreshData();
+                                      }}
+                                      className={`px-2 py-1 rounded-lg text-xs font-semibold
+                                        ${booking.attended
+                                          ? "bg-green-50 text-green-600"
+                                          : "bg-amber-50 text-amber-600"}`}
+                                    >
+                                      <CheckCircle2 size={12} className="inline mr-0.5" />
+                                      {booking.attended ? "Presente" : "Confirmar"}
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        await db.unbookClass(
+                                          booking.classId,
+                                          booking.athleteId,
+                                        );
+                                        await refreshData();
+                                      }}
+                                      className="p-1 text-gray-300 hover:text-red-500"
+                                    >
+                                      <UserX size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

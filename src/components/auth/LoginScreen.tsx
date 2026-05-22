@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LogIn, UserPlus } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import * as db from "../../lib/db";
+import type { Box } from "../../types";
 
 export function LoginScreen() {
   const { signIn, signUp } = useAuth();
@@ -9,8 +11,16 @@ export function LoginScreen() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [boxId, setBoxId] = useState("");
+  const [boxes, setBoxes] = useState<Box[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (mode === "signup") {
+      void db.fetchAllBoxes().then(setBoxes).catch(console.error);
+    }
+  }, [mode]);
 
   async function handleSubmit() {
     setError("");
@@ -19,7 +29,12 @@ export function LoginScreen() {
       if (mode === "signin") {
         await signIn(email.trim(), password);
       } else {
-        await signUp(email.trim(), password, fullName.trim() || "Atleta");
+        await signUp(
+          email.trim(),
+          password,
+          fullName.trim() || "Atleta",
+          boxId || undefined,
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro de autenticação");
@@ -61,6 +76,20 @@ export function LoginScreen() {
             type="password"
             className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
           />
+          {mode === "signup" && boxes.length > 0 && (
+            <select
+              value={boxId}
+              onChange={(e) => setBoxId(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+            >
+              <option value="">Selecionar box...</option>
+              {boxes.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          )}
 
           {error && (
             <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2">

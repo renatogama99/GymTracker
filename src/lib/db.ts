@@ -186,6 +186,7 @@ export async function signUp(
   email: string,
   password: string,
   fullName: string,
+  boxId?: string,
 ): Promise<void> {
   const { error } = await supabase.auth.signUp({
     email,
@@ -193,6 +194,7 @@ export async function signUp(
     options: {
       data: {
         full_name: fullName,
+        box_id: boxId,
       },
     },
   });
@@ -240,6 +242,36 @@ export async function fetchOrCreateDefaultBox(): Promise<Box> {
   };
 }
 
+export async function fetchAllBoxes(): Promise<Box[]> {
+  const { data, error } = await supabase
+    .from("boxes")
+    .select("id, name")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+  }));
+}
+
+export async function createBox(name: string): Promise<Box> {
+  const { data, error } = await supabase
+    .from("boxes")
+    .insert({ name })
+    .select("id, name")
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id as string,
+    name: data.name as string,
+  };
+}
+
+export async function deleteBox(boxId: string): Promise<void> {
+  const { error } = await supabase.from("boxes").delete().eq("id", boxId);
+  if (error) throw error;
+}
+
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
@@ -261,11 +293,14 @@ export async function ensureProfileForUser(params: {
   userId: string;
   email: string;
   fullName: string;
+  boxId?: string;
 }): Promise<Profile> {
   const existing = await fetchProfile(params.userId);
   if (existing) return existing;
 
-  const box = await fetchOrCreateDefaultBox();
+  const box = params.boxId
+    ? { id: params.boxId, name: "" }
+    : await fetchOrCreateDefaultBox();
 
   const { error } = await supabase.from("profiles").insert({
     id: params.userId,
@@ -304,6 +339,17 @@ export async function updateMemberRole(
   const { error } = await supabase
     .from("profiles")
     .update({ role })
+    .eq("id", memberId);
+  if (error) throw error;
+}
+
+export async function updateMemberBox(
+  memberId: string,
+  newBoxId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ box_id: newBoxId })
     .eq("id", memberId);
   if (error) throw error;
 }
