@@ -38,10 +38,7 @@ export async function insertLog(log: WorkoutLog): Promise<void> {
 }
 
 export async function removeLog(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("workout_logs")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("workout_logs").delete().eq("id", id);
   if (error) throw error;
 }
 
@@ -74,10 +71,7 @@ export async function insertLift(lift: LiftEntry): Promise<void> {
 }
 
 export async function removeLift(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("lift_entries")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from("lift_entries").delete().eq("id", id);
   if (error) throw error;
 }
 

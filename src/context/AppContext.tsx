@@ -192,9 +192,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         db.removeAlert(action.payload).catch(console.error);
         break;
       case "TOGGLE_ALERT":
-        db
-          .updateAlertEnabled(action.payload.id, action.payload.enabled)
-          .catch(console.error);
+        db.updateAlertEnabled(action.payload.id, action.payload.enabled).catch(
+          console.error,
+        );
         break;
     }
   }, []);

@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Bell, Trash2, Plus, Clock, ToggleLeft, ToggleRight } from "lucide-react";
+import {
+  Bell,
+  Trash2,
+  Plus,
+  Clock,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import type { Alert } from "../../types";
 import { generateId } from "../../utils/uuid";
@@ -37,8 +44,8 @@ export function AlertasTab() {
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex gap-3 items-start">
         <Bell size={16} className="text-blue-500 mt-0.5 shrink-0" />
         <p className="text-xs text-blue-600 leading-relaxed">
-          Os alertas são enviados pelo bot do Telegram à hora configurada.
-          Podes responder com ✅ ou ❌ para registar o cumprimento no calendário.
+          Os alertas são enviados pelo bot do Telegram à hora configurada. Podes
+          responder com ✅ ou ❌ para registar o cumprimento no calendário.
         </p>
       </div>
 
@@ -86,11 +93,12 @@ export function AlertasTab() {
             onClick={handleAdd}
             disabled={!message.trim() || saving}
             className={`w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2
-              ${saved
-                ? "bg-green-500 text-white"
-                : message.trim()
-                  ? "bg-gray-900 text-white active:scale-[0.98]"
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              ${
+                saved
+                  ? "bg-green-500 text-white"
+                  : message.trim()
+                    ? "bg-gray-900 text-white active:scale-[0.98]"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
           >
             {saved ? (
@@ -138,7 +146,9 @@ export function AlertasTab() {
         <div className="text-center py-12 text-gray-400">
           <Bell size={32} className="mx-auto mb-3 text-gray-200" />
           <p className="text-sm">Nenhum alerta configurado ainda.</p>
-          <p className="text-xs mt-1">Adiciona o teu primeiro lembrete acima.</p>
+          <p className="text-xs mt-1">
+            Adiciona o teu primeiro lembrete acima.
+          </p>
         </div>
       )}
     </div>
@@ -155,7 +165,9 @@ function AlertRow({
   onDelete: () => void;
 }) {
   return (
-    <div className={`px-4 py-3 flex items-start gap-3 ${!alert.enabled ? "opacity-50" : ""}`}>
+    <div
+      className={`px-4 py-3 flex items-start gap-3 ${!alert.enabled ? "opacity-50" : ""}`}
+    >
       {/* Time badge */}
       <div className="shrink-0 flex flex-col items-center justify-center bg-gray-50 rounded-xl px-2.5 py-1.5 min-w-[52px]">
         <Clock size={11} className="text-gray-400 mb-0.5" />

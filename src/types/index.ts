@@ -1,6 +1,11 @@
 export type WorkoutType = "amrap" | "emom" | "tabata" | "chipper" | "wod";
 
-export type Tab = "treinos" | "calendario" | "recordes" | "alertas" | "nutricao";
+export type Tab =
+  | "treinos"
+  | "calendario"
+  | "recordes"
+  | "alertas"
+  | "nutricao";
 
 export interface WorkoutLog {
   id: string;
