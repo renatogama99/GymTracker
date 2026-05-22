@@ -46,7 +46,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "CHAT_ID missing" });
     }
 
-    const requestedTime = typeof req.query?.time === "string" ? req.query.time : null;
+    const requestedTime =
+      typeof req.query?.time === "string" ? req.query.time : null;
     const time = requestedTime || currentHHMM(TIMEZONE);
     const date = todayStr(TIMEZONE);
     const supabase = getSupabase();
