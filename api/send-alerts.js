@@ -20,11 +20,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const expectedSecret = process.env.CRON_SECRET;
-  const providedSecret =
+  const normalizeSecret = (value) => {
+    if (!value) return "";
+    try {
+      return decodeURIComponent(String(value)).trim();
+    } catch {
+      return String(value).trim();
+    }
+  };
+
+  const expectedSecret = normalizeSecret(process.env.CRON_SECRET);
+  const providedSecret = normalizeSecret(
     req.query?.key ||
-    req.headers["x-cron-secret"] ||
-    req.headers["authorization"]?.replace(/^Bearer\s+/i, "");
+      req.headers["x-cron-secret"] ||
+      req.headers["authorization"]?.replace(/^Bearer\s+/i, ""),
+  );
 
   if (expectedSecret && providedSecret !== expectedSecret) {
     return res.status(401).json({ error: "Invalid cron secret" });
