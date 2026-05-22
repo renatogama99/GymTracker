@@ -165,5 +165,7 @@ export async function fetchCompletions(): Promise<DayCompletion[]> {
     id: r.id as string,
     date: r.date as string,
     completed: r.completed as boolean,
+    alertId: (r.alert_id as string | null) ?? undefined,
+    reminderName: (r.reminder_name as string | null) ?? undefined,
   }));
 }

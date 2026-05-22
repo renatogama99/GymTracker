@@ -26,12 +26,13 @@ export function currentHHMM(timeZone) {
   return `${h}:${m}`;
 }
 
-export function completionKeyboard(date) {
+export function completionKeyboard(date, alertId) {
+  const suffix = alertId ? `|${alertId}` : "";
   return {
     inline_keyboard: [
       [
-        { text: "✅ Cumpri", callback_data: `done|${date}` },
-        { text: "❌ Falhei", callback_data: `skip|${date}` },
+        { text: "✅ Cumpri", callback_data: `done|${date}${suffix}` },
+        { text: "❌ Falhei", callback_data: `skip|${date}${suffix}` },
       ],
     ],
   };

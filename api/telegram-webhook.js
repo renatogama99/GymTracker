@@ -93,17 +93,36 @@ export default async function handler(req, res) {
     if (update?.callback_query?.data) {
       const callback = update.callback_query;
       const data = String(callback.data);
-      const sepIdx = data.indexOf("|");
+      const [action, date, alertId] = data.split("|");
 
-      if (sepIdx !== -1) {
-        const action = data.slice(0, sepIdx);
-        const date = data.slice(sepIdx + 1);
+      if (action && date) {
         const completed = action === "done";
-        const label = completed ? "✅ Treino cumprido!" : "❌ Treino falhado.";
 
-        await supabase
-          .from("day_completions")
-          .upsert({ date, completed }, { onConflict: "date" });
+        let reminderName = "Lembrete";
+        if (alertId) {
+          const { data: alertRow } = await supabase
+            .from("alerts")
+            .select("message")
+            .eq("id", alertId)
+            .single();
+          if (alertRow?.message) {
+            reminderName = alertRow.message;
+          }
+        }
+
+        const label = completed
+          ? `✅ ${reminderName} cumprido!`
+          : `❌ ${reminderName} não cumprido.`;
+
+        await supabase.from("day_completions").upsert(
+          {
+            date,
+            completed,
+            alert_id: alertId ?? null,
+            reminder_name: reminderName,
+          },
+          { onConflict: "date" },
+        );
 
         await telegramApi("answerCallbackQuery", {
           callback_query_id: callback.id,

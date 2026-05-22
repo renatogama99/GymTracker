@@ -170,8 +170,8 @@ export function CalendarioTab() {
               <span>{selectedDayCompletion.completed ? "✅" : "❌"}</span>
               <span>
                 {selectedDayCompletion.completed
-                  ? "Treino cumprido via Telegram"
-                  : "Treino falhado (assinalado via Telegram)"}
+                  ? `${selectedDayCompletion.reminderName ?? "Lembrete"} cumprido via Telegram`
+                  : `${selectedDayCompletion.reminderName ?? "Lembrete"} não cumprido (assinalado via Telegram)`}
               </span>
             </div>
           )}

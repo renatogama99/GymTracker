@@ -79,7 +79,7 @@ export default async function handler(req, res) {
       await telegramApi("sendMessage", {
         chat_id: chatId,
         text: alert.message,
-        reply_markup: completionKeyboard(date),
+        reply_markup: completionKeyboard(date, alert.id),
       });
       sent += 1;
     }

@@ -27,6 +27,8 @@ export interface DayCompletion {
   id: string;
   date: string; // YYYY-MM-DD
   completed: boolean; // true = ✅ cumpriu, false = ❌ falhou
+  alertId?: string;
+  reminderName?: string;
 }
 
 // ── Records ────────────────────────────────────────────────────────────────

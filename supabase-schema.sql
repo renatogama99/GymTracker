@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS day_completions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Migration-safe columns for reminder-specific check/x
+ALTER TABLE day_completions ADD COLUMN IF NOT EXISTS alert_id TEXT;
+ALTER TABLE day_completions ADD COLUMN IF NOT EXISTS reminder_name TEXT;
+
 -- ── Disable RLS (single-user personal app) ────────────────────────────────
 ALTER TABLE workout_logs      DISABLE ROW LEVEL SECURITY;
 ALTER TABLE lift_entries      DISABLE ROW LEVEL SECURITY;
