@@ -1,15 +1,15 @@
 {
   "name": "gymtracker-telegram-bot",
   "version": "1.0.0",
-  "description": "Daily CrossFit reminder bot via Telegram",
+  "description": "Webhook management utility for GymTracker Telegram bot on Vercel",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node bot.js",
+    "set-webhook": "node bot.js set-webhook",
+    "get-webhook": "node bot.js get-webhook",
+    "delete-webhook": "node bot.js delete-webhook"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.106.1",
-    "dotenv": "^16.4.5",
-    "node-cron": "^3.0.3",
-    "telegraf": "^4.16.3"
+    "dotenv": "^16.4.5"
   }
 }
