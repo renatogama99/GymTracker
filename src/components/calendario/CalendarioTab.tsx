@@ -123,10 +123,14 @@ export function CalendarioTab() {
                     />
                   ))}
                   {doneCount > 0 && (
-                    <span className="text-[9px] leading-none">✅{doneCount}</span>
+                    <span className="text-[9px] leading-none">
+                      ✅{doneCount}
+                    </span>
                   )}
                   {failCount > 0 && (
-                    <span className="text-[9px] leading-none">❌{failCount}</span>
+                    <span className="text-[9px] leading-none">
+                      ❌{failCount}
+                    </span>
                   )}
                 </div>
               </button>
@@ -186,7 +190,9 @@ export function CalendarioTab() {
 
           {selectedDayLogs.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-gray-400">
-              Nenhum treino registado neste dia.
+              {selectedDayCompletions.length > 0
+                ? "Sem treinos registados neste dia (apenas lembretes)."
+                : "Nenhum treino registado neste dia."}
             </div>
           ) : (
             <div className="divide-y divide-gray-50">

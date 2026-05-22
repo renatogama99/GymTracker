@@ -133,7 +133,7 @@ export default async function handler(req, res) {
         });
 
         const originalText =
-          callback.message?.text ?? "🏋️ Registaste o treino de hoje?";
+          callback.message?.text ?? "📝 Queres assinalar este lembrete?";
         await telegramApi("editMessageText", {
           chat_id: callback.message.chat.id,
           message_id: callback.message.message_id,
