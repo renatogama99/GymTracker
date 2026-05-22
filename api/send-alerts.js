@@ -36,22 +36,35 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "CHAT_ID missing" });
     }
 
-    const time = currentHHMM(TIMEZONE);
+    const requestedTime = typeof req.query?.time === "string" ? req.query.time : null;
+    const time = requestedTime || currentHHMM(TIMEZONE);
     const date = todayStr(TIMEZONE);
     const supabase = getSupabase();
 
     const { data: alerts, error } = await supabase
       .from("alerts")
-      .select("id, message")
-      .eq("enabled", true)
-      .eq("send_time", time);
+      .select("id, message, send_time")
+      .eq("enabled", true);
 
     if (error) {
       return res.status(500).json({ ok: false, error: error.message });
     }
 
+    // Normalize to HH:MM so values like 07:00:00 still match 07:00
+    const normalizeToHHMM = (value) => {
+      if (!value) return "";
+      const text = String(value).trim();
+      const match = text.match(/^(\d{2}):(\d{2})/);
+      return match ? `${match[1]}:${match[2]}` : text;
+    };
+
+    const targetHHMM = normalizeToHHMM(time);
+    const matchedAlerts = (alerts ?? []).filter(
+      (alert) => normalizeToHHMM(alert.send_time) === targetHHMM,
+    );
+
     let sent = 0;
-    for (const alert of alerts ?? []) {
+    for (const alert of matchedAlerts) {
       await telegramApi("sendMessage", {
         chat_id: chatId,
         text: alert.message,
@@ -60,7 +73,16 @@ export default async function handler(req, res) {
       sent += 1;
     }
 
-    return res.status(200).json({ ok: true, sent, time, date });
+    return res.status(200).json({
+      ok: true,
+      sent,
+      matched: matchedAlerts.length,
+      totalEnabled: (alerts ?? []).length,
+      time: targetHHMM,
+      date,
+      timezone: TIMEZONE,
+      chatId,
+    });
   } catch (error) {
     console.error("[send-alerts]", error);
     return res.status(500).json({ ok: false, error: String(error) });
