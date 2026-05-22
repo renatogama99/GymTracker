@@ -20,6 +20,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const expectedSecret = process.env.CRON_SECRET;
+  const providedSecret =
+    req.query?.key ||
+    req.headers["x-cron-secret"] ||
+    req.headers["authorization"]?.replace(/^Bearer\s+/i, "");
+
+  if (expectedSecret && providedSecret !== expectedSecret) {
+    return res.status(401).json({ error: "Invalid cron secret" });
+  }
+
   try {
     const chatId = process.env.CHAT_ID;
     if (!chatId) {
